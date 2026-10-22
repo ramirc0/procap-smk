@@ -51,7 +51,7 @@ def build_parser():
 
 
 def main(argv=None):
-    """Read the tracks chromosome by chromosome and write the QC row.
+    """Read the tracks once per chromosome, then the windows QC needs.
 
     Parameters
     ----------
@@ -63,38 +63,38 @@ def main(argv=None):
         pl.read_csv(args.chrom_sizes, separator="\t", has_header=False).iter_rows()
     )
     readers = {"+": BigWigReader(args.plus), "-": BigWigReader(args.minus)}
-    transcripts = _qc_transcripts(args.gtf, sizes)
     peaks = _peaks(args.peaks, sizes)
 
     totals = {"+": 0.0, "-": 0.0}
-    scores = []
+    in_peaks = 0.0
     for chrom, length in sizes.items():
         for strand, reader in readers.items():
             signal = _chromosome(reader, chrom, length)
             totals[strand] += float(signal.sum(dtype=np.float64))
-            on = transcripts.filter(
-                pl.col("chrom") == chrom, pl.col("strand") == strand
-            )
-            scores.append(on.with_columns(score=_window_sums(signal, on)))
-    scores = pl.concat(scores)
+            if peaks is not None:
+                on = peaks.filter(pl.col("chrom") == chrom)
+                in_peaks += sum(
+                    float(signal[s:e].sum(dtype=np.float64))
+                    for s, e in zip(on["start"], on["end"])
+                )
+
+    transcripts = _qc_transcripts(args.gtf, sizes)
+    scores = pl.concat(
+        on.with_columns(score=_tss_window_sums(readers[strand], on))
+        for (strand,), on in transcripts.partition_by("strand", as_dict=True).items()
+    )
     top = (
         scores.group_by("gene_id")
         .agg(pl.col("score").max())
         .sort("score", "gene_id", descending=[True, False])
         .head(max(1, int(TOP_FRACTION * scores["gene_id"].n_unique())))
     )
-    chosen = transcripts.join(top.select("gene_id"), on="gene_id")
-
+    # The chosen genes overlap no other gene, so summing per gene gives the
+    # same totals as unions taken over all of them.
     sums = np.zeros(4)
-    in_peaks = 0.0
-    for chrom, length in sizes.items():
-        for strand, reader in readers.items():
-            signal = _chromosome(reader, chrom, length)
-            on = chosen.filter(pl.col("chrom") == chrom, pl.col("strand") == strand)
-            sums += _region_sums(signal, on)
-            if peaks is not None:
-                mask = _mask(length, peaks.filter(pl.col("chrom") == chrom))
-                in_peaks += float(signal[mask].sum(dtype=np.float64))
+    chosen = transcripts.join(top.select("gene_id"), on="gene_id")
+    for gene in chosen.partition_by("gene_id"):
+        sums += _gene_sums(readers[gene["strand"][0]], gene)
     tss, tss_len, body, body_len = sums
     density = body / body_len if body_len else np.nan
     total = totals["+"] + totals["-"]
@@ -195,7 +195,8 @@ def _peaks(paths, sizes):
     Returns
     -------
     polars.DataFrame or None
-        Columns chrom, start, end.
+        Columns chrom, start, end of the merged peaks, so that overlapping
+        calls count once.
     """
     if not paths:
         return None
@@ -212,7 +213,20 @@ def _peaks(paths, sizes):
         return pl.DataFrame(
             schema={"chrom": pl.String, "start": pl.Int64, "end": pl.Int64}
         )
-    return pl.concat(frames).filter(pl.col("chrom").is_in(list(sizes)))
+    return (
+        pl.concat(frames)
+        .filter(pl.col("chrom").is_in(list(sizes)))
+        .sort("chrom", "start")
+        .with_columns(
+            group=(pl.col("start") > pl.col("end").cum_max().shift(1))
+            .fill_null(True)
+            .cum_sum()
+            .over("chrom")
+        )
+        .group_by("chrom", "group")
+        .agg(pl.col("start").min(), pl.col("end").max())
+        .drop("group")
+    )
 
 
 def _has_rows(path):
@@ -254,59 +268,61 @@ def _chromosome(reader, chrom, length):
     return reader.read(chrom, [0], length)[0]
 
 
-def _window_sums(signal, transcripts):
-    """Sum the signal in [TSS-100, TSS+1000) of each transcript.
+def _tss_window_sums(reader, transcripts):
+    """Sum the signal in [TSS-100, TSS+1000) of each transcript, strand-aware.
 
     Parameters
     ----------
-    signal : numpy.ndarray
-        Signal of the transcripts' chromosome and strand.
+    reader : figwig.BigWigReader
+        Track of the transcripts' strand.
     transcripts : polars.DataFrame
-        Transcripts on that chromosome and strand.
+        Transcripts on that strand.
 
     Returns
     -------
     numpy.ndarray
         One sum per transcript.
     """
-    cumulative = np.concatenate([[0.0], np.cumsum(signal, dtype=np.float64)])
-    plus = transcripts["strand"] == "+"
+    plus = (transcripts["strand"] == "+").to_numpy()
     tss = np.where(plus, transcripts["start"], transcripts["end"] - 1)
-    lo = np.where(plus, tss - TSS_UPSTREAM, tss - TSS_DOWNSTREAM + 1)
-    hi = np.where(plus, tss + TSS_DOWNSTREAM, tss + TSS_UPSTREAM + 1)
-    lo = np.clip(lo, 0, len(signal))
-    hi = np.clip(hi, 0, len(signal))
-    return cumulative[hi] - cumulative[lo]
+    starts = np.where(plus, tss - TSS_UPSTREAM, tss - TSS_DOWNSTREAM + 1)
+    windows = reader.read(
+        transcripts["chrom"].to_numpy(),
+        np.maximum(starts, 0),
+        TSS_UPSTREAM + TSS_DOWNSTREAM,
+    )
+    return np.nansum(windows, axis=1, dtype=np.float64)
 
 
-def _region_sums(signal, transcripts):
-    """Sum signal and length over the TSS regions and the gene body.
+def _gene_sums(reader, gene):
+    """Sum signal and length over one gene's TSS regions and gene body.
 
     Parameters
     ----------
-    signal : numpy.ndarray
-        Signal of the transcripts' chromosome and strand.
-    transcripts : polars.DataFrame
-        Chosen transcripts on that chromosome and strand.
+    reader : figwig.BigWigReader
+        Track of the gene's strand.
+    gene : polars.DataFrame
+        The gene's chosen transcripts.
 
     Returns
     -------
     numpy.ndarray
         TSS signal, TSS length, gene-body signal, gene-body length.
     """
-    if transcripts.is_empty():
-        return np.zeros(4)
-    start = transcripts["start"].to_numpy()
-    end = transcripts["end"].to_numpy()
-    plus = transcripts["strand"].to_numpy() == "+"
-    head = np.where(plus, start, end - END_REGION)
-    tail = np.where(plus, end - END_REGION, start)
-    tss = _mask_of(len(signal), head, head + END_REGION)
-    body = (
-        _mask_of(len(signal), start, end)
-        & ~tss
-        & ~_mask_of(len(signal), tail, tail + END_REGION)
-    )
+    lo, hi = gene["start"].min(), gene["end"].max()
+    signal = reader.read(gene["chrom"][0], [lo], hi - lo)[0]
+    tss = np.zeros(hi - lo, dtype=bool)
+    tts = np.zeros(hi - lo, dtype=bool)
+    body = np.zeros(hi - lo, dtype=bool)
+    for start, end, strand in gene.select("start", "end", "strand").iter_rows():
+        start, end = start - lo, end - lo
+        head, tail = (
+            (start, end - END_REGION) if strand == "+" else (end - END_REGION, start)
+        )
+        body[start:end] = True
+        tss[head : head + END_REGION] = True
+        tts[tail : tail + END_REGION] = True
+    body &= ~tss & ~tts
     return np.array(
         [
             signal[tss].sum(dtype=np.float64),
@@ -315,45 +331,6 @@ def _region_sums(signal, transcripts):
             body.sum(),
         ]
     )
-
-
-def _mask(length, intervals):
-    """Mark the bases that any interval covers.
-
-    Parameters
-    ----------
-    length : int
-        Chromosome length.
-    intervals : polars.DataFrame
-        Columns start and end, 0-based, half-open.
-
-    Returns
-    -------
-    numpy.ndarray
-        Boolean mask of the chromosome.
-    """
-    return _mask_of(length, intervals["start"].to_numpy(), intervals["end"].to_numpy())
-
-
-def _mask_of(length, starts, ends):
-    """Mark the bases in [starts, ends), clipped to the chromosome.
-
-    Parameters
-    ----------
-    length : int
-        Chromosome length.
-    starts, ends : numpy.ndarray
-        Interval bounds, 0-based, half-open.
-
-    Returns
-    -------
-    numpy.ndarray
-        Boolean mask of the chromosome.
-    """
-    edges = np.zeros(length + 1, dtype=np.int32)
-    np.add.at(edges, np.clip(starts, 0, length), 1)
-    np.add.at(edges, np.clip(ends, 0, length), -1)
-    return np.cumsum(edges[:-1]) > 0
 
 
 if __name__ == "__main__":
