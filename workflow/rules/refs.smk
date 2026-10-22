@@ -11,7 +11,7 @@ rule genome_fasta:
     output:
         temp(f"{REFDIR}/{{genome}}/genome.fa"),
     params:
-        spikein=lambda w, input: input.spikein if w.genome == "hg38_rDNA_dm6" else "",
+        spikein=lambda w, input: [input.spikein] if w.genome == "hg38_rDNA_dm6" else [],
     log:
         f"{LOGDIR}/genome_fasta/{{genome}}.txt",
     benchmark:
@@ -22,10 +22,11 @@ rule genome_fasta:
         r"""
         exec &> >(tee {log:q})
 
+        spikein=({params.spikein:q})
         {{
             zcat -f {input.genome:q} {input.rdna:q}
-            if [[ -n {params.spikein:q} ]]; then
-                zcat -f {params.spikein:q} | sed 's/^>/>dm6_/'
+            if (( ${{#spikein[@]}} )); then
+                zcat -f "${{spikein[@]}}" | sed 's/^>/>dm6_/'
             fi
         }} > {output:q}
 
