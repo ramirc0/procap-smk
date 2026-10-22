@@ -57,6 +57,7 @@ rule dedup:
             --paired \
             --umi-separator=: \
             --unpaired-reads=discard \
+            --random-seed=1 \
             --log={output.log:q} \
             --stdin={input.bam:q} \
             --stdout={output.bam:q}
