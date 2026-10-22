@@ -14,6 +14,8 @@ umi_tools = "==1.1.6"
 fastqc = "==0.13.0"
 multiqc = "==1.35"
 pypints = "==1.2.1"
+# PINTS calls numpy.cross on 2-D vectors, which numpy 2.5 removed.
+numpy = "<2.5"
 # figwig bam2bw's extras, from conda so pysam has one source.
 numba = "*"
 pysam = "*"
