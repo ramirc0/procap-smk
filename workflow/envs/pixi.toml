@@ -1,0 +1,40 @@
+[workspace]
+name = "procap-smk-envs"
+channels = ["conda-forge", "bioconda"]
+platforms = ["linux-64"]
+exclude-newer = "7d"
+
+[dependencies]
+python = "3.12.*"
+polars = ">=1.43"
+fastp = "==1.4.0"
+star = "==2.7.11b"
+samtools = "==1.24"
+umi_tools = "==1.1.6"
+fastqc = "==0.13.0"
+multiqc = "==1.35"
+pypints = "==1.2.1"
+# figwig bam2bw's extras, from conda so pysam has one source.
+numba = "*"
+pysam = "*"
+python-isal = "*"
+pyfaidx = "*"
+biopython = "*"
+tqdm = "*"
+
+[pypi-dependencies]
+figwig = "==0.1.0"
+deflate = ">=0.9"
+
+# PINTS and MultiQC import matplotlib. Without this, a job that inherits DISPLAY picks a GUI backend.
+[activation.env]
+MPLBACKEND = "Agg"
+
+[exclude-newer]
+ca-certificates = "0d"
+certifi = "0d"
+pip = "0d"
+
+[pypi-exclude-newer]
+certifi = "0d"
+pip = "0d"

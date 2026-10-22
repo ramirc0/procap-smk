@@ -1,0 +1,14 @@
+samples: config/samples.tsv
+outdir: results
+pixi_env: default
+run_id: default          # outputs go under results/<run_id>/; override per run
+
+# FASTAs may be gzipped. The GTF must be plain text (STAR reads it directly).
+references:
+  genome: /data/zusers/ramirezc/static/hg38/genome/GRCh38_no_alt_analysis_set_GCA_000001405.15.fasta
+  rdna: /data/zusers/ramirezc/static/hg38/genome/U13369.1.fasta
+  spikein: /data/zusers/ramirezc/static/dm6/genome/dm6.fa
+  gtf: /data/zusers/ramirezc/static/hg38/annotation/gencode.v50.annotation.gtf
+
+star:
+  sa_index_nbases: 14    # min(14, log2(genome length) / 2 - 1); the toy test genome needs 9
