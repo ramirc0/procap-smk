@@ -1,14 +1,15 @@
 samples: config/samples.tsv
 outdir: results
 pixi_env: default
-run_id: default          # outputs go under results/<run_id>/; override per run
+run_id: default
 
+# Toy inputs from make_data.sh: 1 Mb of chr12 around GAPDH, the rDNA repeat,
+# 200 kb of dm6 chr4, and the GENCODE v50 genes inside the chr12 slice.
 references:
-  reference: resources/reference.txt
+  genome: resources/genome.fa
+  rdna: resources/rdna.fa
+  spikein: resources/spikein.fa
+  gtf: resources/annotation.gtf
 
-analyze:
-  window: 100
-  threshold: 0.5
-  metric: mean
-  normalize: true
-  random_state: null
+star:
+  sa_index_nbases: 9
