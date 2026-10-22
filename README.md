@@ -66,7 +66,7 @@ Under `results/<run_id>/<unit>/<unit>`, per unit:
 | Unit | Files |
 |---|---|
 | run | `.unfiltered.bam`, `.fastp.{json,html}`, `.Log.final.out`, `.ReadsPerGene.out.tab`, FastQC reports, `.samtools_stats.txt` |
-| library | `.bam` + `.bai`, `.+.bw`, `.-.bw`, umi_tools log and stats, `.samtools_stats.txt`, `.idxstats.tsv`, `.signal_qc.tsv` |
+| library | `.bam` + `.bai`, `.+.bw`, `.-.bw`, umi_tools log, `.samtools_stats.txt`, `.idxstats.tsv`, `.signal_qc.tsv` |
 | experiment | pooled `.+.bw` and `.-.bw`, `_1_{bidirectional,divergent,unidirectional}_peaks.bed`, `.signal_qc.tsv`, `.replicate_correlation.tsv` |
 
 `results/<run_id>/qc/` holds `libraries.tsv`, `experiments.tsv` and the MultiQC

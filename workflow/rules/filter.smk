@@ -43,14 +43,6 @@ rule dedup:
         bam=f"{OUTDIR}/{{library}}/{{library}}.bam",
         bai=f"{OUTDIR}/{{library}}/{{library}}.bam.bai",
         log=f"{OUTDIR}/{{library}}/{{library}}.umi_tools.log",
-        stats=multiext(
-            f"{OUTDIR}/{{library}}/{{library}}.umi",
-            "_per_umi.tsv",
-            "_per_umi_per_position.tsv",
-            "_edit_distance.tsv",
-        ),
-    params:
-        stats=lambda w: f"{prefix(w.library)}.umi",
     log:
         f"{LOGDIR}/dedup/{{library}}.txt",
     benchmark:
@@ -65,7 +57,6 @@ rule dedup:
             --paired \
             --umi-separator=: \
             --unpaired-reads=discard \
-            --output-stats={params.stats:q} \
             --log={output.log:q} \
             --stdin={input.bam:q} \
             --stdout={output.bam:q}

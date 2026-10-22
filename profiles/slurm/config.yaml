@@ -63,7 +63,7 @@ set-resources:              # tune from benchmarks/ TSVs after a real run
     runtime: 120m
   dedup:
     slurm_partition: 5days
-    mem_mb: 32000 * attempt
+    mem_mb: 16000 * attempt
     runtime: 1440m
   bigwig:
     mem_mb: 8000 * attempt
