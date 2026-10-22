@@ -1,5 +1,7 @@
 # Per run: UMI extraction and trimming, then alignment. Flags are ENCODE v2's
-# (rmsp-library PROcapAnalysis 20240501 and the STAR @PG line of its BAMs).
+# (rmsp-library PROcapAnalysis 20240501 and the STAR @PG line of its BAMs),
+# except fastp's adapters. The template's ACGGAT/CGGCTT match nothing, so pairs
+# too short for overlap trimming kept their adapters. ENCODE's reads show RA3/RA5.
 
 
 rule fastp:
@@ -32,8 +34,8 @@ rule fastp:
             --umi \
             --umi_loc per_read \
             --umi_len 6 \
-            --adapter_sequence ACGGAT \
-            --adapter_sequence_r2 CGGCTT \
+            --adapter_sequence TGGAATTCTCGGGTGCCAAGG \
+            --adapter_sequence_r2 GATCGTCGGACTGTAGAACTCTGAAC \
             --overlap_len_require 18 \
             --length_required 18 \
             --low_complexity_filter \

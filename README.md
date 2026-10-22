@@ -16,8 +16,10 @@ to filtered BAMs, RNA 5' end bigWigs, PINTS peaks and QC tables.
 | experiment | bidirectional, divergent and unidirectional peaks | PINTS |
 
 The flags are ENCODE v2's, recovered from the rmsp-library template
-`PROcapAnalysis/20240501` and the `@PG` lines of ENCODE's BAMs. The bigWigs
-hold raw counts on chr1-22, X and Y. Minus-strand values are positive.
+`PROcapAnalysis/20240501` and the `@PG` lines of ENCODE's BAMs. The fastp
+adapters are the exception: ENCODE's trimmed reads end at the Illumina RA3 and
+RA5 adapters, not at the template's defaults. The bigWigs hold raw counts on
+chr1-22, X and Y. Minus-strand values are positive.
 
 ## Layout
 
