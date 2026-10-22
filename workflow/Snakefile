@@ -5,6 +5,7 @@ include: "rules/align.smk"
 include: "rules/filter.smk"
 include: "rules/signal.smk"
 include: "rules/peaks.smk"
+include: "rules/qc.smk"
 
 
 rule all:
@@ -12,3 +13,6 @@ rule all:
         [f"{prefix(lib)}.bam" for lib in LIBRARIES],
         [f"{prefix(u)}.{s}.bw" for u in LIBRARIES + EXPERIMENTS for s in "+-"],
         [bed for e in EXPERIMENTS for bed in peak_beds(e)],
+        f"{OUTDIR}/qc/libraries.tsv",
+        f"{OUTDIR}/qc/experiments.tsv",
+        f"{OUTDIR}/qc/multiqc.html",
