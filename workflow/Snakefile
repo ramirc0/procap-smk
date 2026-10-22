@@ -1,9 +1,14 @@
 
 include: "rules/common.smk"
 include: "rules/refs.smk"
+include: "rules/align.smk"
+include: "rules/filter.smk"
+include: "rules/signal.smk"
+include: "rules/peaks.smk"
 
 
 rule all:
     input:
-        [f"{REFDIR}/{g}/star" for g in sorted({genome_of(r) for r in RUNS})],
-        f"{REFDIR}/signal.chrom.sizes",
+        [f"{prefix(lib)}.bam" for lib in LIBRARIES],
+        [f"{prefix(u)}.{s}.bw" for u in LIBRARIES + EXPERIMENTS for s in "+-"],
+        [bed for e in EXPERIMENTS for bed in peak_beds(e)],

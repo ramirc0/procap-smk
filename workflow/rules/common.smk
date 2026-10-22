@@ -75,6 +75,7 @@ for _library, _runs in RUNS_OF.items():
     LIBRARIES_OF.setdefault(EXPERIMENT_OF[_runs[0]], []).append(_library)
 LIBRARIES = list(RUNS_OF)
 EXPERIMENTS = list(LIBRARIES_OF)
+REPLICATED = [e for e in EXPERIMENTS if len(LIBRARIES_OF[e]) > 1]
 
 if not RUNS:
     raise WorkflowError(f"Run sheet {_SHEET} has no rows.")
@@ -111,6 +112,7 @@ wildcard_constraints:
     run=_alternatives(RUNS),
     library=_alternatives(LIBRARIES),
     experiment=_alternatives(EXPERIMENTS),
+    unit=_alternatives(LIBRARIES + EXPERIMENTS),
 
 
 def prefix(unit):
@@ -143,3 +145,38 @@ def genome_of(run):
         `hg38_rDNA_dm6` for a dm6 spike-in run, else `hg38_rDNA`.
     """
     return "hg38_rDNA_dm6" if SPIKEIN_OF[run] == "dm6" else "hg38_rDNA"
+
+
+def libraries_in(unit):
+    """Return the libraries a library or experiment track pools.
+
+    Parameters
+    ----------
+    unit : str
+        Library or experiment ID from the sheet.
+
+    Returns
+    -------
+    list of str
+        The library itself, or every library of the experiment.
+    """
+    return [unit] if unit in RUNS_OF else LIBRARIES_OF[unit]
+
+
+def peak_beds(experiment):
+    """Return the PINTS peak BEDs of an experiment.
+
+    Parameters
+    ----------
+    experiment : str
+        Experiment ID from the sheet.
+
+    Returns
+    -------
+    list of str
+        Bidirectional, divergent and unidirectional peak BED paths.
+    """
+    return [
+        f"{prefix(experiment)}_1_{t}_peaks.bed"
+        for t in ["bidirectional", "divergent", "unidirectional"]
+    ]

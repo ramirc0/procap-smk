@@ -19,6 +19,17 @@ default-resources:          # fallback for trivial rules
 
 set-threads:
   star_index: 16
+  fastp: 8
+  star_align: 16
+  filter_unique: 4
+  pints: 8
+  samtools_stats: 4
 
 set-resources:              # tune from benchmarks/ TSVs after a real run
   star_index: {mem_mb: 64000}
+  star_align: {mem_mb: 64000}
+  dedup: {mem_mb: 32000}
+  pints: {mem_mb: 32000}
+  signal_qc: {mem_mb: 16000}
+  replicate_correlation: {mem_mb: 16000}
+  multiqc: {mem_mb: 16000}

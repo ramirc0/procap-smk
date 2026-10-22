@@ -27,6 +27,19 @@ set-threads:
   genome_fasta: 1
   star_index: 16
   chrom_sizes: 1
+  fastp: 8
+  star_align: 16
+  filter_unique: 4
+  dedup: 1
+  bigwig: 2
+  pints: 8
+  fastqc: 2
+  samtools_stats: 4
+  idxstats: 1
+  signal_qc: 1
+  replicate_correlation: 1
+  qc_table: 1
+  multiqc: 1
 
 set-resources:              # tune from benchmarks/ TSVs after a real run
   genome_fasta:
@@ -38,6 +51,48 @@ set-resources:              # tune from benchmarks/ TSVs after a real run
   chrom_sizes:
     mem_mb: 2000 * attempt
     runtime: 30m
+  fastp:
+    mem_mb: 8000 * attempt
+    runtime: 180m
+  star_align:
+    slurm_partition: 12hours
+    mem_mb: 64000 * attempt
+    runtime: 360m
+  filter_unique:
+    mem_mb: 8000 * attempt
+    runtime: 120m
+  dedup:
+    slurm_partition: 5days
+    mem_mb: 32000 * attempt
+    runtime: 1440m
+  bigwig:
+    mem_mb: 8000 * attempt
+    runtime: 120m
+  pints:
+    slurm_partition: 12hours
+    mem_mb: 32000 * attempt
+    runtime: 720m
+  fastqc:
+    mem_mb: 4000 * attempt
+    runtime: 180m
+  samtools_stats:
+    mem_mb: 4000 * attempt
+    runtime: 60m
+  idxstats:
+    mem_mb: 2000 * attempt
+    runtime: 30m
+  signal_qc:
+    mem_mb: 16000 * attempt
+    runtime: 120m
+  replicate_correlation:
+    mem_mb: 16000 * attempt
+    runtime: 60m
+  qc_table:
+    mem_mb: 4000 * attempt
+    runtime: 30m
+  multiqc:
+    mem_mb: 16000 * attempt
+    runtime: 120m
 
   # GPU rule pattern (uncomment + adapt for a CUDA rule):
   #  fit:
