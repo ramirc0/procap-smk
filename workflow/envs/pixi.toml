@@ -28,9 +28,12 @@ tqdm = "*"
 figwig = "==0.1.0"
 deflate = ">=0.9"
 
-# PINTS and MultiQC import matplotlib. Without this, a job that inherits DISPLAY picks a GUI backend.
 [activation.env]
+# PINTS and MultiQC import matplotlib. Without this, a job that inherits DISPLAY picks a GUI backend.
 MPLBACKEND = "Agg"
+# numpy madvises arrays of 4 MB or more for huge pages. On the fragmented SLURM nodes,
+# each huge-page fault stalls in kernel compaction: reading chr1 and chr2 took 66 s, not 3 s.
+NUMPY_MADVISE_HUGEPAGE = "0"
 
 [exclude-newer]
 ca-certificates = "0d"
