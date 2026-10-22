@@ -69,9 +69,9 @@ set-resources:              # tune from benchmarks/ TSVs after a real run
     mem_mb: 8000 * attempt
     runtime: 120m
   pints:
-    slurm_partition: 12hours
+    slurm_partition: 5days
     mem_mb: 32000 * attempt
-    runtime: 720m
+    runtime: 2880m
   fastqc:
     mem_mb: 4000 * attempt
     runtime: 180m
@@ -82,8 +82,8 @@ set-resources:              # tune from benchmarks/ TSVs after a real run
     mem_mb: 2000 * attempt
     runtime: 30m
   signal_qc:
-    mem_mb: 16000 * attempt
-    runtime: 120m
+    mem_mb: 8000 * attempt
+    runtime: 60m
   replicate_correlation:
     mem_mb: 16000 * attempt
     runtime: 60m
