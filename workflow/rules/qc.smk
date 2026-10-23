@@ -192,11 +192,14 @@ rule qc_table:
 
 rule multiqc:
     input:
-        [f"{out('fastp', r)}.json" for r in RUNS],
-        [f"{out('fastqc', r)}.{s}_{m}_fastqc.zip" for r in RUNS for s in ["raw", "trimmed"] for m in ["R1", "R2"]],
-        [f"{out('star_align', r)}.{f}" for r in RUNS for f in ["Log.final.out", "ReadsPerGene.out.tab"]],
-        [f"{out('samtools_stats', n)}.txt" for n in RUNS + LIBRARIES],
-        [f"{out('dedup', lib)}.umi_tools.log" for lib in LIBRARIES],
+        config=f"{workflow.basedir}/multiqc.yaml",
+        reports=[
+            *[f"{out('fastp', r)}.json" for r in RUNS],
+            *[f"{out('fastqc', r)}.{s}_{m}_fastqc.zip" for r in RUNS for s in ["raw", "trimmed"] for m in ["R1", "R2"]],
+            *[f"{out('star_align', r)}.{f}" for r in RUNS for f in ["Log.final.out", "ReadsPerGene.out.tab"]],
+            *[f"{out('samtools_stats', n)}.txt" for n in RUNS + LIBRARIES],
+            *[f"{out('dedup', lib)}.umi_tools.log" for lib in LIBRARIES],
+        ],
     output:
         html=f"{OUTDIR}/qc/multiqc.html",
         data=directory(f"{OUTDIR}/qc/multiqc_data"),
@@ -214,9 +217,10 @@ rule multiqc:
 
         files=$(mktemp)
         trap 'rm -f "$files"' EXIT
-        printf '%s\n' {input:q} > "$files"
+        printf '%s\n' {input.reports:q} > "$files"
 
         multiqc \
+            --config {input.config:q} \
             --file-list "$files" \
             --outdir {params.outdir:q} \
             --filename multiqc.html \
