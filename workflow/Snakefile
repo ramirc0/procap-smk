@@ -13,6 +13,7 @@ rule all:
         [f"{out('dedup', lib)}.bam" for lib in LIBRARIES],
         [f"{out('bigwig', u)}.{s}.bw" for u in LIBRARIES + EXPERIMENTS for s in "+-"],
         [bed for e in EXPERIMENTS for bed in peak_beds(e)],
+        [f"{out('merge_peaks', e)}.bed" for e in EXPERIMENTS],
         f"{OUTDIR}/qc/libraries.tsv",
         f"{OUTDIR}/qc/experiments.tsv",
         f"{OUTDIR}/qc/multiqc.html",

@@ -33,6 +33,7 @@ set-threads:
   dedup: 1
   bigwig: 2
   pints: 8
+  merge_peaks: 1
   fastqc: 2
   samtools_stats: 4
   idxstats: 1
@@ -72,6 +73,9 @@ set-resources:              # tune from benchmarks/ TSVs after a real run
     slurm_partition: 5days
     mem_mb: 32000 * attempt
     runtime: 2880m
+  merge_peaks:
+    mem_mb: 2000 * attempt
+    runtime: 30m
   fastqc:
     mem_mb: 4000 * attempt
     runtime: 180m

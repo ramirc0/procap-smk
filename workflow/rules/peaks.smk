@@ -51,3 +51,38 @@ rule pints:
 
         sync {output:q}
         """
+
+
+# The PRO-cap atlas training peaks: bidirectional and unidirectional calls in
+# ProCapNet's 8-column format (chrom, start, end, strand, confidence, type,
+# + summits, - summits), as procap-atlas src/preprocess/_merge_uni_bi_peaks.py.
+rule merge_peaks:
+    input:
+        bi=f"{OUTDIR}/{{experiment}}/pints/{{experiment}}.bidirectional.bed",
+        uni=f"{OUTDIR}/{{experiment}}/pints/{{experiment}}.unidirectional.bed",
+    output:
+        f"{OUTDIR}/{{experiment}}/merge_peaks/{{experiment}}.bed",
+    log:
+        f"{LOGDIR}/{{experiment}}/merge_peaks/{{experiment}}.txt",
+    benchmark:
+        f"{BENCHDIR}/{{experiment}}/merge_peaks/{{experiment}}.tsv",
+    software:
+        SOFTWARE_ENV
+    shell:
+        r"""
+        exec &> >(tee {log:q})
+
+        # Unidirectional rows come first so that the stable sort breaks ties as
+        # the atlas does.
+        {{
+            awk -v OFS='\t' '{{
+                print $1, $2, $3, $6, ".", "Unidirectional",
+                    ($6 == "+" ? $(NF - 1) : "."), ($6 == "+" ? "." : $(NF - 1))
+            }}' {input.uni:q}
+            awk -v OFS='\t' '{{
+                print $1, $2, $3, "Both", $4, "Bidirectional", $5, $6
+            }}' {input.bi:q}
+        }} | LC_ALL=C sort -s -k1,1 -k2,2n > {output:q}
+
+        sync {output:q}
+        """
