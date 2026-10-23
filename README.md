@@ -74,6 +74,7 @@ experiment's `<experiment>`. Logs and benchmarks follow the same layout.
 | `dedup` | library | `.bam`, `.bam.bai`, `.umi_tools.log` |
 | `bigwig` | library, experiment | `.+.bw`, `.-.bw` |
 | `pints` | experiment | `.{bidirectional,divergent,unidirectional}.bed` |
+| `merge_peaks` | experiment | `.bed`: bidirectional and unidirectional peaks in ProCapNet's 8 columns, as the PRO-cap atlas trains on |
 | `samtools_stats` | run, library | `.txt` |
 | `idxstats` | library | `.tsv` |
 | `signal_qc` | library, experiment | `.tsv` |
