@@ -1,6 +1,6 @@
 run	library	experiment	r1	r2	spikein
-ENCFF254NZI	ENCSR197JLW_1_1	ENCSR197JLW	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF254NZI.fastq.gz	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF982HII.fastq.gz	dm6
-ENCFF546OUD	ENCSR197JLW_2_1	ENCSR197JLW	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF546OUD.fastq.gz	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF639FYO.fastq.gz	dm6
-ENCFF035HSR	ENCSR575NNF_1_1	ENCSR575NNF	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF035HSR.fastq.gz	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF817MEA.fastq.gz	
-ENCFF500WLN	ENCSR575NNF_1_2	ENCSR575NNF	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF500WLN.fastq.gz	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF901LYA.fastq.gz	
-ENCFF835IYW	ENCSR575NNF_1_2	ENCSR575NNF	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF835IYW.fastq.gz	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF835SSD.fastq.gz	
+ENCFF254NZI	1_1	ENCSR197JLW	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF254NZI.fastq.gz	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF982HII.fastq.gz	dm6
+ENCFF546OUD	2_1	ENCSR197JLW	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF546OUD.fastq.gz	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF639FYO.fastq.gz	dm6
+ENCFF035HSR	1_1	ENCSR575NNF	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF035HSR.fastq.gz	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF817MEA.fastq.gz	
+ENCFF500WLN	1_2	ENCSR575NNF	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF500WLN.fastq.gz	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF901LYA.fastq.gz	
+ENCFF835IYW	1_2	ENCSR575NNF	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF835IYW.fastq.gz	/home/ramirezc/Projects/jackfruit/data/procap-atlas/encode/fastqs/ENCFF835SSD.fastq.gz	

@@ -69,13 +69,15 @@ def main(argv=None):
     )
     out = Path(args.results)
     rows = []
-    for run, r1 in sheet.select("run", "r1").iter_rows():
+    for run, library, experiment, r1 in sheet.select(
+        "run", "library", "experiment", "r1"
+    ).iter_rows():
         acc = Path(r1).name.removesuffix(".fastq.gz")
         encode = files.filter(
             pl.col("output_type") == "unfiltered alignments",
             pl.col("derived_from").str.contains(f"/files/{acc}/"),
         )["accession"].item()
-        ours = out / run / f"{run}.unfiltered.bam"
+        ours = out / experiment / "star_align" / f"{experiment}.{library}.{run}.bam"
         rows.append(
             (
                 "run",
@@ -91,20 +93,20 @@ def main(argv=None):
     for library, experiment in (
         sheet.select("library", "experiment").unique().iter_rows()
     ):
-        replicate = library.removeprefix(f"{experiment}_")
         mine = files.filter(
             pl.col("experiment") == experiment,
-            pl.col("technical_replicates") == replicate,
+            pl.col("technical_replicates") == library,
         )
+        stem = f"{experiment}.{library}"
         encode_bam = mine.filter(pl.col("output_type") == "alignments")[
             "accession"
         ].item()
         rows.append(
             (
                 "library",
-                library,
+                stem,
                 "pairs",
-                _count(str(out / library / f"{library}.bam")) // 2,
+                _count(str(out / experiment / "dedup" / f"{stem}.bam")) // 2,
                 _count(_url(encode_bam, "bam")) // 2,
             )
         )
@@ -113,18 +115,18 @@ def main(argv=None):
                 "accession"
             ].item()
             for metric, ours, theirs in _bigwig_agreement(
-                out / library / f"{library}.{strand}.bw",
+                out / experiment / "bigwig" / f"{stem}.{strand}.bw",
                 Path(args.encode_root, experiment, f"{encode_bw}.bigWig"),
                 sizes,
             ):
-                rows.append(("library", library, f"{kind}_{metric}", ours, theirs))
+                rows.append(("library", stem, f"{kind}_{metric}", ours, theirs))
     for experiment in sheet["experiment"].unique().sort():
         for kind in PEAK_TYPES:
             encode_bed = files.filter(
                 pl.col("experiment") == experiment,
                 pl.col("output_type") == f"{kind} peaks",
             )["accession"].item()
-            ours = out / experiment / f"{experiment}_1_{kind}_peaks.bed"
+            ours = out / experiment / "pints" / f"{experiment}.{kind}.bed"
             theirs = Path(args.encode_root, experiment, f"{encode_bed}.bed.gz")
             rows += [
                 (

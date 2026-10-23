@@ -51,9 +51,10 @@ pyproject.toml           ruff + numpydoc config
 ## Inputs
 
 - **Run sheet.** One row per FASTQ pair. Runs of one `library` are merged
-  before deduplication. Libraries of one `experiment` are pooled for peak
-  calling. `spikein` is `dm6` for runs aligned to the Drosophila spike-in
-  index, else empty.
+  before deduplication. A library label such as `1_2` is unique within its
+  `experiment`. Libraries of one experiment are pooled for peak calling.
+  `spikein` is `dm6` for runs aligned to the Drosophila spike-in index, else
+  empty. IDs must not contain dots.
 - **FASTQs** must be on disk. The workflow downloads nothing.
 - **References** are local paths in the config: the GRCh38 no-alt analysis set,
   the rDNA repeat `U13369.1`, UCSC dm6 and GENCODE v50. FASTAs may be gzipped;
@@ -61,13 +62,22 @@ pyproject.toml           ruff + numpydoc config
 
 ## Outputs
 
-Under `results/<run_id>/<unit>/<unit>`, per unit:
+Under `results/<run_id>/<experiment>/<rule>/<unit>`. A run's unit is
+`<experiment>.<library>.<run>`, a library's `<experiment>.<library>`, an
+experiment's `<experiment>`. Logs and benchmarks follow the same layout.
 
-| Unit | Files |
-|---|---|
-| run | `.unfiltered.bam`, `.fastp.{json,html}`, `.Log.final.out`, `.ReadsPerGene.out.tab`, FastQC reports, `.samtools_stats.txt` |
-| library | `.bam` + `.bai`, `.+.bw`, `.-.bw`, umi_tools log, `.samtools_stats.txt`, `.idxstats.tsv`, `.signal_qc.tsv` |
-| experiment | pooled `.+.bw` and `.-.bw`, `_1_{bidirectional,divergent,unidirectional}_peaks.bed`, `.signal_qc.tsv`, `.replicate_correlation.tsv` |
+| Rule | Unit | Files |
+|---|---|---|
+| `fastp` | run | `.json`, `.html` |
+| `fastqc` | run | `.{raw,trimmed}_R{1,2}_fastqc.{zip,html}` |
+| `star_align` | run | `.bam`, `.Log.final.out`, `.ReadsPerGene.out.tab` |
+| `dedup` | library | `.bam`, `.bam.bai`, `.umi_tools.log` |
+| `bigwig` | library, experiment | `.+.bw`, `.-.bw` |
+| `pints` | experiment | `.{bidirectional,divergent,unidirectional}.bed` |
+| `samtools_stats` | run, library | `.txt` |
+| `idxstats` | library | `.tsv` |
+| `signal_qc` | library, experiment | `.tsv` |
+| `replicate_correlation` | experiment | `.tsv` |
 
 `results/<run_id>/qc/` holds `libraries.tsv`, `experiments.tsv` and the MultiQC
 report. The gene-body ratio follows the paper's description (Shah et al.,

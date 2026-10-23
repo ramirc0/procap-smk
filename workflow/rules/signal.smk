@@ -5,17 +5,17 @@
 
 rule bigwig:
     input:
-        bams=lambda w: [f"{prefix(lib)}.bam" for lib in libraries_in(w.unit)],
+        bams=lambda w: [f"{out('dedup', lib)}.bam" for lib in libraries_in(w.unit)],
         sizes=f"{REFDIR}/signal.chrom.sizes",
     output:
-        plus=f"{OUTDIR}/{{unit}}/{{unit}}.+.bw",
-        minus=f"{OUTDIR}/{{unit}}/{{unit}}.-.bw",
+        plus=f"{OUTDIR}/{{experiment}}/bigwig/{{unit}}.+.bw",
+        minus=f"{OUTDIR}/{{experiment}}/bigwig/{{unit}}.-.bw",
     params:
-        name=lambda w: prefix(w.unit),
+        name=lambda w: out("bigwig", w.unit),
     log:
-        f"{LOGDIR}/bigwig/{{unit}}.txt",
+        f"{LOGDIR}/{{experiment}}/bigwig/{{unit}}.txt",
     benchmark:
-        f"{BENCHDIR}/bigwig/{{unit}}.tsv",
+        f"{BENCHDIR}/{{experiment}}/bigwig/{{unit}}.tsv",
     software:
         SOFTWARE_ENV
     shell:

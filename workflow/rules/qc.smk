@@ -3,24 +3,24 @@
 
 rule fastqc:
     input:
-        r1=lambda w: R1_OF[w.run] if w.stage == "raw" else f"{prefix(w.run)}_R1.fastq.gz",
-        r2=lambda w: R2_OF[w.run] if w.stage == "raw" else f"{prefix(w.run)}_R2.fastq.gz",
+        r1=lambda w: R1_OF[w.run] if w.stage == "raw" else f"{out('fastp', w.run)}_R1.fastq.gz",
+        r2=lambda w: R2_OF[w.run] if w.stage == "raw" else f"{out('fastp', w.run)}_R2.fastq.gz",
     output:
         multiext(
-            f"{OUTDIR}/{{run}}/{{run}}.{{stage}}",
+            f"{OUTDIR}/{{experiment}}/fastqc/{{run}}.{{stage}}",
             "_R1_fastqc.zip",
             "_R1_fastqc.html",
             "_R2_fastqc.zip",
             "_R2_fastqc.html",
         ),
     params:
-        prefix=lambda w: f"{prefix(w.run)}.{w.stage}",
+        prefix=lambda w: f"{out('fastqc', w.run)}.{w.stage}",
     wildcard_constraints:
         stage="raw|trimmed",
     log:
-        f"{LOGDIR}/fastqc/{{run}}.{{stage}}.txt",
+        f"{LOGDIR}/{{experiment}}/fastqc/{{run}}.{{stage}}.txt",
     benchmark:
-        f"{BENCHDIR}/fastqc/{{run}}.{{stage}}.tsv",
+        f"{BENCHDIR}/{{experiment}}/fastqc/{{run}}.{{stage}}.tsv",
     software:
         SOFTWARE_ENV
     shell:
@@ -45,15 +45,15 @@ rule fastqc:
 # A run's unfiltered BAM, or a library's deduplicated one.
 rule samtools_stats:
     input:
-        lambda w: f"{prefix(w.name)}.unfiltered.bam" if w.name in LIBRARY_OF else f"{prefix(w.name)}.bam",
+        lambda w: f"{out('star_align', w.name)}.bam" if w.name in R1_OF else f"{out('dedup', w.name)}.bam",
     output:
-        f"{OUTDIR}/{{name}}/{{name}}.samtools_stats.txt",
+        f"{OUTDIR}/{{experiment}}/samtools_stats/{{name}}.txt",
     wildcard_constraints:
         name=_alternatives(RUNS + LIBRARIES),
     log:
-        f"{LOGDIR}/samtools_stats/{{name}}.txt",
+        f"{LOGDIR}/{{experiment}}/samtools_stats/{{name}}.txt",
     benchmark:
-        f"{BENCHDIR}/samtools_stats/{{name}}.tsv",
+        f"{BENCHDIR}/{{experiment}}/samtools_stats/{{name}}.tsv",
     software:
         SOFTWARE_ENV
     shell:
@@ -68,14 +68,14 @@ rule samtools_stats:
 
 rule idxstats:
     input:
-        bam=f"{OUTDIR}/{{library}}/{{library}}.bam",
-        bai=f"{OUTDIR}/{{library}}/{{library}}.bam.bai",
+        bam=f"{OUTDIR}/{{experiment}}/dedup/{{library}}.bam",
+        bai=f"{OUTDIR}/{{experiment}}/dedup/{{library}}.bam.bai",
     output:
-        f"{OUTDIR}/{{library}}/{{library}}.idxstats.tsv",
+        f"{OUTDIR}/{{experiment}}/idxstats/{{library}}.tsv",
     log:
-        f"{LOGDIR}/idxstats/{{library}}.txt",
+        f"{LOGDIR}/{{experiment}}/idxstats/{{library}}.txt",
     benchmark:
-        f"{BENCHDIR}/idxstats/{{library}}.tsv",
+        f"{BENCHDIR}/{{experiment}}/idxstats/{{library}}.tsv",
     software:
         SOFTWARE_ENV
     shell:
@@ -90,17 +90,17 @@ rule idxstats:
 
 rule signal_qc:
     input:
-        plus=f"{OUTDIR}/{{unit}}/{{unit}}.+.bw",
-        minus=f"{OUTDIR}/{{unit}}/{{unit}}.-.bw",
+        plus=f"{OUTDIR}/{{experiment}}/bigwig/{{unit}}.+.bw",
+        minus=f"{OUTDIR}/{{experiment}}/bigwig/{{unit}}.-.bw",
         gtf=REFERENCES["gtf"],
         sizes=f"{REFDIR}/signal.chrom.sizes",
         peaks=lambda w: [] if w.unit in RUNS_OF else peak_beds(w.unit),
     output:
-        f"{OUTDIR}/{{unit}}/{{unit}}.signal_qc.tsv",
+        f"{OUTDIR}/{{experiment}}/signal_qc/{{unit}}.tsv",
     log:
-        f"{LOGDIR}/signal_qc/{{unit}}.txt",
+        f"{LOGDIR}/{{experiment}}/signal_qc/{{unit}}.txt",
     benchmark:
-        f"{BENCHDIR}/signal_qc/{{unit}}.tsv",
+        f"{BENCHDIR}/{{experiment}}/signal_qc/{{unit}}.tsv",
     software:
         SOFTWARE_ENV
     shell:
@@ -122,17 +122,17 @@ rule signal_qc:
 
 rule replicate_correlation:
     input:
-        plus=lambda w: [f"{prefix(lib)}.+.bw" for lib in LIBRARIES_OF[w.experiment]],
-        minus=lambda w: [f"{prefix(lib)}.-.bw" for lib in LIBRARIES_OF[w.experiment]],
+        plus=lambda w: [f"{out('bigwig', lib)}.+.bw" for lib in LIBRARIES_OF[w.experiment]],
+        minus=lambda w: [f"{out('bigwig', lib)}.-.bw" for lib in LIBRARIES_OF[w.experiment]],
         sizes=f"{REFDIR}/signal.chrom.sizes",
     output:
-        f"{OUTDIR}/{{experiment}}/{{experiment}}.replicate_correlation.tsv",
+        f"{OUTDIR}/{{experiment}}/replicate_correlation/{{experiment}}.tsv",
     params:
         libraries=lambda w: LIBRARIES_OF[w.experiment],
     log:
-        f"{LOGDIR}/replicate_correlation/{{experiment}}.txt",
+        f"{LOGDIR}/{{experiment}}/replicate_correlation/{{experiment}}.txt",
     benchmark:
-        f"{BENCHDIR}/replicate_correlation/{{experiment}}.tsv",
+        f"{BENCHDIR}/{{experiment}}/replicate_correlation/{{experiment}}.tsv",
     software:
         SOFTWARE_ENV
     shell:
@@ -153,14 +153,13 @@ rule replicate_correlation:
 
 rule qc_table:
     input:
-        samples=config["samples"],
-        fastp=[f"{prefix(r)}.fastp.json" for r in RUNS],
-        star=[f"{prefix(r)}.Log.final.out" for r in RUNS],
-        umi_logs=[f"{prefix(lib)}.umi_tools.log" for lib in LIBRARIES],
-        library_stats=[f"{prefix(lib)}.samtools_stats.txt" for lib in LIBRARIES],
-        idxstats=[f"{prefix(lib)}.idxstats.tsv" for lib in LIBRARIES],
-        signal_qc=[f"{prefix(u)}.signal_qc.tsv" for u in LIBRARIES + EXPERIMENTS],
-        correlations=[f"{prefix(e)}.replicate_correlation.tsv" for e in REPLICATED],
+        fastp=[f"{out('fastp', r)}.json" for r in RUNS],
+        star=[f"{out('star_align', r)}.Log.final.out" for r in RUNS],
+        umi_logs=[f"{out('dedup', lib)}.umi_tools.log" for lib in LIBRARIES],
+        library_stats=[f"{out('samtools_stats', lib)}.txt" for lib in LIBRARIES],
+        idxstats=[f"{out('idxstats', lib)}.tsv" for lib in LIBRARIES],
+        signal_qc=[f"{out('signal_qc', u)}.tsv" for u in LIBRARIES + EXPERIMENTS],
+        correlations=[f"{out('replicate_correlation', e)}.tsv" for e in REPLICATED],
         peaks=[bed for e in EXPERIMENTS for bed in peak_beds(e)],
     output:
         libraries=f"{OUTDIR}/qc/libraries.tsv",
@@ -176,7 +175,6 @@ rule qc_table:
         exec &> >(tee {log:q})
 
         python {workflow.basedir:q}/scripts/qc_table.py \
-            --samples {input.samples:q} \
             --fastp {input.fastp:q} \
             --star {input.star:q} \
             --umi_logs {input.umi_logs:q} \
@@ -194,11 +192,11 @@ rule qc_table:
 
 rule multiqc:
     input:
-        [f"{prefix(r)}.fastp.json" for r in RUNS],
-        [f"{prefix(r)}.{s}_{m}_fastqc.zip" for r in RUNS for s in ["raw", "trimmed"] for m in ["R1", "R2"]],
-        [f"{prefix(r)}.{f}" for r in RUNS for f in ["Log.final.out", "ReadsPerGene.out.tab"]],
-        [f"{prefix(n)}.samtools_stats.txt" for n in RUNS + LIBRARIES],
-        [f"{prefix(lib)}.umi_tools.log" for lib in LIBRARIES],
+        [f"{out('fastp', r)}.json" for r in RUNS],
+        [f"{out('fastqc', r)}.{s}_{m}_fastqc.zip" for r in RUNS for s in ["raw", "trimmed"] for m in ["R1", "R2"]],
+        [f"{out('star_align', r)}.{f}" for r in RUNS for f in ["Log.final.out", "ReadsPerGene.out.tab"]],
+        [f"{out('samtools_stats', n)}.txt" for n in RUNS + LIBRARIES],
+        [f"{out('dedup', lib)}.umi_tools.log" for lib in LIBRARIES],
     output:
         html=f"{OUTDIR}/qc/multiqc.html",
         data=directory(f"{OUTDIR}/qc/multiqc_data"),

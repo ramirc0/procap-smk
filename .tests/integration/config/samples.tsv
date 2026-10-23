@@ -1,5 +1,5 @@
 run	library	experiment	r1	r2	spikein
-toyA_r1	toyA_lib1	toyA	resources/reads/toyA_r1_R1.fastq.gz	resources/reads/toyA_r1_R2.fastq.gz	
-toyA_r2	toyA_lib1	toyA	resources/reads/toyA_r2_R1.fastq.gz	resources/reads/toyA_r2_R2.fastq.gz	
-toyB_r1	toyB_lib1	toyB	resources/reads/toyB_r1_R1.fastq.gz	resources/reads/toyB_r1_R2.fastq.gz	dm6
-toyB_r2	toyB_lib2	toyB	resources/reads/toyB_r2_R1.fastq.gz	resources/reads/toyB_r2_R2.fastq.gz	dm6
+toyA_r1	lib1	toyA	resources/reads/toyA_r1_R1.fastq.gz	resources/reads/toyA_r1_R2.fastq.gz	
+toyA_r2	lib1	toyA	resources/reads/toyA_r2_R1.fastq.gz	resources/reads/toyA_r2_R2.fastq.gz	
+toyB_r1	lib1	toyB	resources/reads/toyB_r1_R1.fastq.gz	resources/reads/toyB_r1_R2.fastq.gz	dm6
+toyB_r2	lib2	toyB	resources/reads/toyB_r2_R1.fastq.gz	resources/reads/toyB_r2_R2.fastq.gz	dm6

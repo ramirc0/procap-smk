@@ -4,14 +4,14 @@
 
 rule filter_unique:
     input:
-        lambda w: [f"{prefix(r)}.unfiltered.bam" for r in RUNS_OF[w.library]],
+        lambda w: [f"{out('star_align', r)}.bam" for r in RUNS_OF[w.library]],
     output:
-        bam=temp(f"{OUTDIR}/{{library}}/{{library}}.unique.bam"),
-        bai=temp(f"{OUTDIR}/{{library}}/{{library}}.unique.bam.bai"),
+        bam=temp(f"{OUTDIR}/{{experiment}}/filter_unique/{{library}}.bam"),
+        bai=temp(f"{OUTDIR}/{{experiment}}/filter_unique/{{library}}.bam.bai"),
     log:
-        f"{LOGDIR}/filter_unique/{{library}}.txt",
+        f"{LOGDIR}/{{experiment}}/filter_unique/{{library}}.txt",
     benchmark:
-        f"{BENCHDIR}/filter_unique/{{library}}.tsv",
+        f"{BENCHDIR}/{{experiment}}/filter_unique/{{library}}.tsv",
     software:
         SOFTWARE_ENV
     shell:
@@ -37,16 +37,16 @@ rule filter_unique:
 
 rule dedup:
     input:
-        bam=f"{OUTDIR}/{{library}}/{{library}}.unique.bam",
-        bai=f"{OUTDIR}/{{library}}/{{library}}.unique.bam.bai",
+        bam=f"{OUTDIR}/{{experiment}}/filter_unique/{{library}}.bam",
+        bai=f"{OUTDIR}/{{experiment}}/filter_unique/{{library}}.bam.bai",
     output:
-        bam=f"{OUTDIR}/{{library}}/{{library}}.bam",
-        bai=f"{OUTDIR}/{{library}}/{{library}}.bam.bai",
-        log=f"{OUTDIR}/{{library}}/{{library}}.umi_tools.log",
+        bam=f"{OUTDIR}/{{experiment}}/dedup/{{library}}.bam",
+        bai=f"{OUTDIR}/{{experiment}}/dedup/{{library}}.bam.bai",
+        log=f"{OUTDIR}/{{experiment}}/dedup/{{library}}.umi_tools.log",
     log:
-        f"{LOGDIR}/dedup/{{library}}.txt",
+        f"{LOGDIR}/{{experiment}}/dedup/{{library}}.txt",
     benchmark:
-        f"{BENCHDIR}/dedup/{{library}}.tsv",
+        f"{BENCHDIR}/{{experiment}}/dedup/{{library}}.tsv",
     software:
         SOFTWARE_ENV
     shell:

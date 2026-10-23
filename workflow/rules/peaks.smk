@@ -4,21 +4,21 @@
 
 rule pints:
     input:
-        plus=f"{OUTDIR}/{{experiment}}/{{experiment}}.+.bw",
-        minus=f"{OUTDIR}/{{experiment}}/{{experiment}}.-.bw",
+        plus=f"{OUTDIR}/{{experiment}}/bigwig/{{experiment}}.+.bw",
+        minus=f"{OUTDIR}/{{experiment}}/bigwig/{{experiment}}.-.bw",
     output:
         multiext(
-            f"{OUTDIR}/{{experiment}}/{{experiment}}_1_",
-            "bidirectional_peaks.bed",
-            "divergent_peaks.bed",
-            "unidirectional_peaks.bed",
+            f"{OUTDIR}/{{experiment}}/pints/{{experiment}}",
+            ".bidirectional.bed",
+            ".divergent.bed",
+            ".unidirectional.bed",
         ),
     params:
-        outdir=lambda w: f"{OUTDIR}/{w.experiment}",
+        prefix=lambda w: out("pints", w.experiment),
     log:
-        f"{LOGDIR}/pints/{{experiment}}.txt",
+        f"{LOGDIR}/{{experiment}}/pints/{{experiment}}.txt",
     benchmark:
-        f"{BENCHDIR}/pints/{{experiment}}.tsv",
+        f"{BENCHDIR}/{{experiment}}/pints/{{experiment}}.tsv",
     software:
         SOFTWARE_ENV
     shell:
@@ -40,12 +40,12 @@ rule pints:
             --dont-check-updates
         cat "$tmp"/peakcalling_*.log
         for kind in bidirectional divergent unidirectional; do
-            bed={wildcards.experiment:q}_1_${{kind}}_peaks.bed
+            bed="$tmp"/{wildcards.experiment:q}_1_${{kind}}_peaks.bed
             # PINTS writes no file for a peak type it found none of.
-            if [[ -e "$tmp/$bed" ]]; then
-                mv "$tmp/$bed" {params.outdir:q}/
+            if [[ -e "$bed" ]]; then
+                mv "$bed" {params.prefix:q}.$kind.bed
             else
-                : > {params.outdir:q}/"$bed"
+                : > {params.prefix:q}.$kind.bed
             fi
         done
 

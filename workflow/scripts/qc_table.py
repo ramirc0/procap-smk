@@ -1,7 +1,7 @@
 """Join the per-run, per-library and per-experiment QC into two tables.
 
-Each input sits in its unit's output directory, so a file's parent directory
-names its run, library or experiment.
+File names start with the unit: `<experiment>.<library>.<run>` for a run,
+`<experiment>.<library>` for a library and `<experiment>` for an experiment.
 """
 
 import argparse
@@ -24,7 +24,6 @@ def build_parser():
         Parser for the qc_table.py flags.
     """
     p = argparse.ArgumentParser(description="Collect PRO-cap QC into two tables.")
-    p.add_argument("--samples", required=True, help="Run sheet TSV.")
     p.add_argument("--fastp", nargs="+", required=True, help="fastp JSON per run.")
     p.add_argument(
         "--star", nargs="+", required=True, help="STAR Log.final.out per run."
@@ -71,18 +70,15 @@ def main(argv=None):
         Command-line arguments. Defaults to `sys.argv[1:]`.
     """
     args = build_parser().parse_args(argv)
-    sheet = pl.read_csv(
-        args.samples, separator="\t", infer_schema=False, comment_prefix="#"
-    )
     runs = pl.DataFrame([_run_row(f, s) for f, s in zip(args.fastp, args.star)])
     signal = pl.concat(
         [pl.read_csv(f, separator="\t") for f in args.signal_qc], how="diagonal_relaxed"
     )
+    is_library = pl.col("unit").str.contains(".", literal=True)
+    unit_parts = pl.col("unit").str.split_exact(".", 1)
 
     libraries = (
-        sheet.select("run", "library", "experiment")
-        .join(runs, on="run")
-        .group_by("library", "experiment")
+        runs.group_by("experiment", "library")
         .agg(
             pl.len().alias("runs"),
             pl.col(
@@ -96,11 +92,15 @@ def main(argv=None):
                     for f in zip(args.umi_logs, args.library_stats, args.idxstats)
                 ]
             ),
-            on="library",
+            on=["experiment", "library"],
         )
         .join(
-            signal.select(pl.col("unit").alias("library"), "gene_body_ratio"),
-            on="library",
+            signal.filter(is_library).select(
+                unit_parts.struct.field("field_0").alias("experiment"),
+                unit_parts.struct.field("field_1").alias("library"),
+                "gene_body_ratio",
+            ),
+            on=["experiment", "library"],
         )
         .with_columns(
             (100 * pl.col("star_unique_pairs") / pl.col("star_input_pairs")).alias(
@@ -111,8 +111,8 @@ def main(argv=None):
             ),
         )
         .select(
-            "library",
             "experiment",
+            "library",
             "runs",
             "raw_pairs",
             "trimmed_pairs",
@@ -137,7 +137,7 @@ def main(argv=None):
         libraries.group_by("experiment")
         .agg(pl.len().alias("libraries"), pl.col("dedup_pairs").sum())
         .join(
-            signal.select(
+            signal.filter(~is_library).select(
                 pl.col("unit").alias("experiment"),
                 (pl.col("plus_signal") + pl.col("minus_signal")).alias("signal_pairs"),
                 "gene_body_ratio",
@@ -152,20 +152,22 @@ def main(argv=None):
     experiments.write_csv(args.experiments, separator="\t")
 
 
-def _unit(path):
+def _unit(path, suffix):
     """Return the run, library or experiment a QC file belongs to.
 
     Parameters
     ----------
     path : str
-        QC file path, `<outdir>/<run_id>/<unit>/<file>`.
+        QC file path, `.../<rule>/<unit><suffix>`.
+    suffix : str
+        File name ending after the unit.
 
     Returns
     -------
-    str
-        The unit ID.
+    list of str
+        The unit split into experiment, then library and run if present.
     """
-    return Path(path).parent.name
+    return Path(path).name.removesuffix(suffix).split(".")
 
 
 def _run_row(fastp, star):
@@ -181,7 +183,7 @@ def _run_row(fastp, star):
     Returns
     -------
     dict
-        Run ID and pair counts.
+        Experiment, library and pair counts.
     """
     summary = json.loads(Path(fastp).read_text())["summary"]
     pairs = (
@@ -190,8 +192,10 @@ def _run_row(fastp, star):
         if "|" in line
     )
     log = {k.strip(): v.strip() for k, v in pairs}
+    experiment, library, _ = _unit(fastp, ".json")
     return {
-        "run": _unit(fastp),
+        "experiment": experiment,
+        "library": library,
         "raw_pairs": summary["before_filtering"]["total_reads"] // 2,
         "trimmed_pairs": summary["after_filtering"]["total_reads"] // 2,
         "star_input_pairs": int(log["Number of input reads"]),
@@ -214,7 +218,7 @@ def _library_row(umi_log, stats, idxstats):
     Returns
     -------
     dict
-        Library ID, pair counts and median RNA length.
+        Experiment, library, pair counts and median RNA length.
     """
     text = Path(umi_log).read_text()
     filtered = int(re.search(r"Input Reads: (\d+)", text).group(1))
@@ -234,8 +238,10 @@ def _library_row(umi_log, stats, idxstats):
         new_columns=["contig", "length", "mapped", "unmapped"],
     )
     contig = pl.col("contig")
+    experiment, library = _unit(stats, ".txt")
     return {
-        "library": _unit(stats),
+        "experiment": experiment,
+        "library": library,
         "filtered_pairs": filtered,
         "dedup_pairs": int(summary["raw total sequences"]) // 2,
         "signal_pairs": _pairs_on(contigs, contig.str.contains(r"^chr([0-9]+|X|Y)$")),
@@ -291,7 +297,7 @@ def _peak_counts(paths):
     Parameters
     ----------
     paths : list of str
-        PINTS BEDs, `<experiment>_1_<type>_peaks.bed`.
+        PINTS BEDs, `<experiment>.<type>.bed`.
 
     Returns
     -------
@@ -300,11 +306,10 @@ def _peak_counts(paths):
     """
     rows = {}
     for path in paths:
-        kind = next(
-            t for t in PEAK_TYPES if Path(path).name.endswith(f"_1_{t}_peaks.bed")
-        )
+        kind = next(t for t in PEAK_TYPES if Path(path).name.endswith(f".{t}.bed"))
+        (experiment,) = _unit(path, f".{kind}.bed")
         with open(path) as f:
-            rows.setdefault(_unit(path), {})[f"{kind}_peaks"] = sum(1 for _ in f)
+            rows.setdefault(experiment, {})[f"{kind}_peaks"] = sum(1 for _ in f)
     return pl.DataFrame([{"experiment": e, **counts} for e, counts in rows.items()])
 
 

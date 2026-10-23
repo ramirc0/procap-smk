@@ -9,14 +9,14 @@ rule fastp:
         r1=lambda w: R1_OF[w.run],
         r2=lambda w: R2_OF[w.run],
     output:
-        r1=temp(f"{OUTDIR}/{{run}}/{{run}}_R1.fastq.gz"),
-        r2=temp(f"{OUTDIR}/{{run}}/{{run}}_R2.fastq.gz"),
-        html=f"{OUTDIR}/{{run}}/{{run}}.fastp.html",
-        json=f"{OUTDIR}/{{run}}/{{run}}.fastp.json",
+        r1=temp(f"{OUTDIR}/{{experiment}}/fastp/{{run}}_R1.fastq.gz"),
+        r2=temp(f"{OUTDIR}/{{experiment}}/fastp/{{run}}_R2.fastq.gz"),
+        html=f"{OUTDIR}/{{experiment}}/fastp/{{run}}.html",
+        json=f"{OUTDIR}/{{experiment}}/fastp/{{run}}.json",
     log:
-        f"{LOGDIR}/fastp/{{run}}.txt",
+        f"{LOGDIR}/{{experiment}}/fastp/{{run}}.txt",
     benchmark:
-        f"{BENCHDIR}/fastp/{{run}}.tsv",
+        f"{BENCHDIR}/{{experiment}}/fastp/{{run}}.tsv",
     software:
         SOFTWARE_ENV
     shell:
@@ -50,16 +50,16 @@ rule fastp:
 rule star_align:
     input:
         index=lambda w: f"{REFDIR}/{genome_of(w.run)}/star",
-        r1=f"{OUTDIR}/{{run}}/{{run}}_R1.fastq.gz",
-        r2=f"{OUTDIR}/{{run}}/{{run}}_R2.fastq.gz",
+        r1=f"{OUTDIR}/{{experiment}}/fastp/{{run}}_R1.fastq.gz",
+        r2=f"{OUTDIR}/{{experiment}}/fastp/{{run}}_R2.fastq.gz",
     output:
-        bam=f"{OUTDIR}/{{run}}/{{run}}.unfiltered.bam",
-        log_final=f"{OUTDIR}/{{run}}/{{run}}.Log.final.out",
-        gene_counts=f"{OUTDIR}/{{run}}/{{run}}.ReadsPerGene.out.tab",
+        bam=f"{OUTDIR}/{{experiment}}/star_align/{{run}}.bam",
+        log_final=f"{OUTDIR}/{{experiment}}/star_align/{{run}}.Log.final.out",
+        gene_counts=f"{OUTDIR}/{{experiment}}/star_align/{{run}}.ReadsPerGene.out.tab",
     log:
-        f"{LOGDIR}/star_align/{{run}}.txt",
+        f"{LOGDIR}/{{experiment}}/star_align/{{run}}.txt",
     benchmark:
-        f"{BENCHDIR}/star_align/{{run}}.tsv",
+        f"{BENCHDIR}/{{experiment}}/star_align/{{run}}.tsv",
     software:
         SOFTWARE_ENV
     shell:

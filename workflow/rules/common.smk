@@ -18,6 +18,7 @@ LOGDIR = f"logs/{RUN_ID}"
 BENCHDIR = f"benchmarks/{RUN_ID}"
 REFERENCES = config["references"]
 GENOMES = ["hg38_rDNA", "hg38_rDNA_dm6"]
+PEAK_TYPES = ["bidirectional", "divergent", "unidirectional"]
 
 # The workspace path is relative to the rule file. Every rule file sits in rules/.
 SOFTWARE_ENV = pixi(workspace="../envs", env=config["pixi_env"], locked=True)
@@ -44,48 +45,32 @@ if _missing:
     raise WorkflowError(f"Run sheet {_SHEET} lacks columns: {sorted(_missing)}")
 
 
-def _column(name):
-    """Map each run to its value in sheet column `name`.
+if not _manifest.height:
+    raise WorkflowError(f"Run sheet {_SHEET} has no rows.")
+if _manifest.select(pl.col("run", "library", "experiment").str.contains(r"\.").any()).row(0) != (False,) * 3:
+    raise WorkflowError("Run, library and experiment IDs must not contain dots; dots join them in file names.")
 
-    Parameters
-    ----------
-    name : str
-        Run sheet column.
-
-    Returns
-    -------
-    dict of str to str or None
-        Value per `run`, with empty cells as None.
-    """
-    return {row["run"]: (row[name] or None) for row in _manifest.iter_rows(named=True)}
-
-
-RUNS = _manifest.get_column("run").to_list()
-LIBRARY_OF = _column("library")
-EXPERIMENT_OF = _column("experiment")
-R1_OF = _column("r1")
-R2_OF = _column("r2")
-SPIKEIN_OF = _column("spikein")
-
-RUNS_OF = {}
-for _run in RUNS:
-    RUNS_OF.setdefault(LIBRARY_OF[_run], []).append(_run)
-LIBRARIES_OF = {}
-for _library, _runs in RUNS_OF.items():
-    LIBRARIES_OF.setdefault(EXPERIMENT_OF[_runs[0]], []).append(_library)
+# A library is `<experiment>.<library>`, a run `<experiment>.<library>.<run>`.
+# These stems name every output file.
+RUNS = []
+R1_OF, R2_OF, SPIKEIN_OF, RUNS_OF = {}, {}, {}, {}
+for _row in _manifest.iter_rows(named=True):
+    _library = f"{_row['experiment']}.{_row['library']}"
+    _run = f"{_library}.{_row['run']}"
+    RUNS.append(_run)
+    R1_OF[_run], R2_OF[_run] = _row["r1"], _row["r2"]
+    SPIKEIN_OF[_run] = _row["spikein"] or None
+    RUNS_OF.setdefault(_library, []).append(_run)
 LIBRARIES = list(RUNS_OF)
+LIBRARIES_OF = {}
+for _library in LIBRARIES:
+    LIBRARIES_OF.setdefault(_library.split(".")[0], []).append(_library)
 EXPERIMENTS = list(LIBRARIES_OF)
 REPLICATED = [e for e in EXPERIMENTS if len(LIBRARIES_OF[e]) > 1]
 
-if not RUNS:
-    raise WorkflowError(f"Run sheet {_SHEET} has no rows.")
 if len(set(RUNS)) != len(RUNS):
     raise WorkflowError(f"Run sheet {_SHEET} repeats a run.")
-if set(RUNS) & set(LIBRARIES) or set(RUNS) & set(EXPERIMENTS) or set(LIBRARIES) & set(EXPERIMENTS):
-    raise WorkflowError("Run, library and experiment IDs must not overlap; they share output directories.")
 for _library, _runs in RUNS_OF.items():
-    if len({EXPERIMENT_OF[r] for r in _runs}) > 1:
-        raise WorkflowError(f"Library {_library} spans several experiments.")
     if len({SPIKEIN_OF[r] for r in _runs}) > 1:
         raise WorkflowError(f"Runs of library {_library} disagree on spikein; they are merged.")
 if set(SPIKEIN_OF.values()) - {None, "dm6"}:
@@ -115,20 +100,22 @@ wildcard_constraints:
     unit=_alternatives(LIBRARIES + EXPERIMENTS),
 
 
-def prefix(unit):
-    """Return the output prefix of a run, library or experiment.
+def out(rule, unit):
+    """Return the output prefix of a rule for a run, library or experiment.
 
     Parameters
     ----------
+    rule : str
+        Rule that writes the output.
     unit : str
-        Run, library or experiment ID from the sheet.
+        Run or library stem, or experiment ID.
 
     Returns
     -------
     str
-        Path `<outdir>/<run_id>/<unit>/<unit>`.
+        Path `<outdir>/<run_id>/<experiment>/<rule>/<unit>`.
     """
-    return f"{OUTDIR}/{unit}/{unit}"
+    return f"{OUTDIR}/{unit.split('.')[0]}/{rule}/{unit}"
 
 
 def genome_of(run):
@@ -137,7 +124,7 @@ def genome_of(run):
     Parameters
     ----------
     run : str
-        Run ID from the sheet.
+        Run stem.
 
     Returns
     -------
@@ -153,7 +140,7 @@ def libraries_in(unit):
     Parameters
     ----------
     unit : str
-        Library or experiment ID from the sheet.
+        Library stem or experiment ID.
 
     Returns
     -------
@@ -176,7 +163,4 @@ def peak_beds(experiment):
     list of str
         Bidirectional, divergent and unidirectional peak BED paths.
     """
-    return [
-        f"{prefix(experiment)}_1_{t}_peaks.bed"
-        for t in ["bidirectional", "divergent", "unidirectional"]
-    ]
+    return [f"{out('pints', experiment)}.{t}.bed" for t in PEAK_TYPES]

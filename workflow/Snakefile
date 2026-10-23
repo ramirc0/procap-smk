@@ -10,8 +10,8 @@ include: "rules/qc.smk"
 
 rule all:
     input:
-        [f"{prefix(lib)}.bam" for lib in LIBRARIES],
-        [f"{prefix(u)}.{s}.bw" for u in LIBRARIES + EXPERIMENTS for s in "+-"],
+        [f"{out('dedup', lib)}.bam" for lib in LIBRARIES],
+        [f"{out('bigwig', u)}.{s}.bw" for u in LIBRARIES + EXPERIMENTS for s in "+-"],
         [bed for e in EXPERIMENTS for bed in peak_beds(e)],
         f"{OUTDIR}/qc/libraries.tsv",
         f"{OUTDIR}/qc/experiments.tsv",
