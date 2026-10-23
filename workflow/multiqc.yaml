@@ -23,3 +23,6 @@ module_order:
   - star
   - samtools
   - umitools
+# MultiQC draws a plot instead of a table past this many rows. The full sheet
+# has 527 runs and 413 libraries.
+max_table_rows: 2000
