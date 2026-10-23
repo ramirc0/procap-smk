@@ -70,11 +70,12 @@ rule star_align:
         out=$(mktemp -d)
         trap 'rm -rf "$out"' EXIT
 
+        # --readFilesCommand runs a script from the temp dir, and some nodes mount
+        # /tmp noexec. STAR then waits forever on its input FIFO.
         STAR \
             --runThreadN {threads:q} \
             --genomeDir {input.index:q} \
-            --readFilesIn {input.r1:q} {input.r2:q} \
-            --readFilesCommand zcat \
+            --readFilesIn <(zcat {input.r1:q}) <(zcat {input.r2:q}) \
             --outFileNamePrefix "$out/" \
             --outSAMtype BAM SortedByCoordinate \
             --outSAMattributes All \
