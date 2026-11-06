@@ -1,0 +1,89 @@
+digraph workflow {
+  label = "procap-smk: ENCODE PRO-cap pipeline v2"
+
+  subgraph cluster_inputs {
+    label = "Inputs"
+    fastq  [class = data, label = "<run>_R{1,2}.fastq.gz"]
+    fasta  [class = data, label = "GRCh38.fa\nU13369.1.fa\ndm6.fa"]
+    gtf    [class = data, label = "gencode.v50.gtf"]
+  }
+
+  subgraph cluster_refs {
+    label = "References"
+    genome_fasta [class = step, label = "Genome fasta\ncat"]
+    star_index   [class = step, label = "Star index\nSTAR"]
+    chrom_sizes  [class = step, label = "Chrom sizes\nsamtools faidx"]
+  }
+
+  subgraph cluster_align {
+    label = "Align (per run)"
+    fastp      [class = step, label = "Fastp\nfastp"]
+    star_align [class = step, label = "Star align\nSTAR"]
+  }
+
+  subgraph cluster_filter {
+    label = "Filter (per library)"
+    filter_unique [class = step, label = "Filter unique\nsamtools"]
+    dedup         [class = step, label = "Dedup\numi_tools"]
+  }
+
+  subgraph cluster_signal {
+    label = "Signal and peaks"
+    bigwig      [class = step, label = "Bigwig\nfigwig"]
+    pints       [class = step, label = "Pints\nPINTS"]
+    merge_peaks [class = step, label = "Merge peaks\npython"]
+  }
+
+  subgraph cluster_qc {
+    label = "QC"
+    fastqc                [class = step, label = "Fastqc\nFastQC"]
+    samtools_stats        [class = step, label = "Samtools stats\nsamtools"]
+    idxstats              [class = step, label = "Idxstats\nsamtools"]
+    signal_qc             [class = step, label = "Signal qc\npython"]
+    replicate_correlation [class = step, label = "Replicate correlation\npython"]
+    qc_table              [class = step, label = "Qc table\npython"]
+    multiqc               [class = step, label = "Multiqc\nMultiQC"]
+  }
+
+  dedup_bam  [class = result, label = "<library>.bam"]
+  bigwigs    [class = result, label = "<unit>.{+,-}.bw"]
+  peaks      [class = result, label = "<experiment>.bed"]
+  qc_tables  [class = result, label = "{libraries,experiments}.tsv"]
+  report     [class = result, label = "multiqc.html"]
+
+  fasta -> genome_fasta -> star_index -> star_align
+  gtf -> star_index
+  fasta -> chrom_sizes
+
+  fastq -> fastp -> star_align -> filter_unique -> dedup -> dedup_bam
+  dedup -> bigwig -> bigwigs
+  chrom_sizes -> bigwig
+  bigwig -> pints -> merge_peaks -> peaks
+
+  fastq -> fastqc
+  fastp -> fastqc
+  star_align -> samtools_stats
+  dedup -> samtools_stats
+  dedup -> idxstats
+  bigwig -> signal_qc
+  gtf -> signal_qc
+  pints -> signal_qc
+  bigwig -> replicate_correlation
+
+  fastp -> qc_table
+  star_align -> qc_table
+  dedup -> qc_table
+  samtools_stats -> qc_table
+  idxstats -> qc_table
+  signal_qc -> qc_table
+  replicate_correlation -> qc_table
+  pints -> qc_table
+  qc_table -> qc_tables
+
+  fastp -> multiqc
+  fastqc -> multiqc
+  star_align -> multiqc
+  samtools_stats -> multiqc
+  dedup -> multiqc
+  multiqc -> report
+}

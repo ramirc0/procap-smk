@@ -6,6 +6,8 @@ to filtered BAMs, RNA 5' end bigWigs, PINTS peaks and QC tables.
 
 ## Steps
 
+![Rule graph](docs/workflow.png)
+
 | Unit | Step | Tool |
 |---|---|---|
 | run (FASTQ pair) | UMI extraction (6 nt per read) and trimming | fastp |
@@ -26,6 +28,7 @@ chr1-22, X and Y. Minus-strand values are positive.
 ```
 .tests/integration/      config + toy inputs for the end-to-end test; make_data.sh rebuilds them
 .tests/encode/           compare_encode.py: agreement with ENCODE's released files
+docs/workflow.gv         rule graph source; workflow.png is its render (graphviz-dot-theme, snakemake style, TB)
 config/
   config.yaml.template   references and parameters; copy to config.yaml (gitignored)
   samples.example.tsv    one row per FASTQ pair: run, library, experiment, r1, r2, spikein
